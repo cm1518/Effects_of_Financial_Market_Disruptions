@@ -1,0 +1,197 @@
+%2multibyte Version: 5.50.0.2960 CodePage: 65001
+%\newtheorem{theorem}{Theorem}
+%\newtheorem{axiom}[theorem]{Axiom}
+%\newtheorem{conjecture}[theorem]{Conjecture}
+%\newtheorem{definition}[theorem]{Definition}
+%\newtheorem{example}[theorem]{Example}
+%\newtheorem{exercise}[theorem]{Exercise}
+%\newtheorem{proposition}[theorem]{Proposition}
+%\newtheorem{remark}[theorem]{Remark}
+%\usepackage{acronym}
+
+
+\documentclass[a4paper,12pt]{article}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{amsmath,bm}
+%\usepackage[doublespacing]{setspace}
+\usepackage{epstopdf}
+\usepackage{tikz}
+\usepackage{harvard}
+
+\setcounter{MaxMatrixCols}{10}
+
+
+\setlength{\textwidth}{6.2in}
+\setlength{\oddsidemargin}{0in}
+\setlength{\evensidemargin}{0in}
+
+\begin{document}
+
+
+\title{\large{Readme file for \textit{Are the effects of financial crises big or small?\footnote{For any question, please write to alexander.ziegenbein@univie.ac.at.}}}}
+\author{\normalsize{Regis Barnichon}, \normalsize{Christian Matthes}, \normalsize{Alex Ziegenbein}  }
+\date{\footnotesize \today}
+
+\maketitle
+
+\section*{Files}
+
+\begin{enumerate}
+\item[--] \textit{USdata.xls} contains the data for the United States used in the paper and the online appendix.
+\item[--] \textit{UKdata.xls} contains the data for the United Kingdom used in the paper and the online appendix.
+\item[--] The folder \textit{RomerRomerReplication} contains Stata code to replicate Romer and Romer (2017) as in Section 2 of the paper.
+\item[--] The folder \textit{GilchristZakrajsekReplication} contains Stata code to replicate Gilchrist and Zakrajsek (2012) as in Section 2 of the paper.
+\item[--] \textit{VAR-LP first pass} contains Stata code to replicate the results from the first pass approach in Section 3.
+\item[--] \textit{FAIR} contains the Matlab code to replicate the results from the FAIR approach in Section 5 and 6.
+\end{enumerate}
+
+To facilitate replication of the FAIR-based results, we elaborate on the code and method below.
+
+\section*{FAIR}
+
+The code allows for asymmetry in \emph{one} shock of interest. Both for the US and the UK, we use two Gaussian basis function. 
+
+\section{List of most important files and folders}
+\begin{enumerate}
+  \item Principal.m - the main file to estimate an asymmetric model.
+	
+  \item setup\_NL.m - initializes most of the setup structure that is used for estimation. The setup structure contains all the options used for the estimation except parameter restrictions and priors (which are both set in Principal.m). 
+	
+  \item results.m - plots the estimated Impulse Responses (IRs).
+
+  \item VAR\_resp\_match\_lp.m - finds the initial guess for the maximization routine by calculating the FAIR model parameters that best fit the VAR-based IR functions. At the end, it plots the VAR-based IR along with the FAIR fitted values, so that the user can visually inspect whether the initial guess is reasonable. When changing the data source, it may be necessary to make minor adjustments in VAR\_resp\_match\_NL.m in order to obtain a good initial guess, i.e. a good approximation of the VAR-based IR.
+  
+  \item DGPRS4\_BM.m - loads the data and initialises the VAR estimation.
+  
+    \item /dataandlibrary - contains the data and additional functions used by Principal.m
+
+  
+  \end{enumerate}
+  
+In its current setup, the code estimates the FAIR using US data. One can use UK data instead by changing the data source in DGPRS4\_BM adjusting lag-lengths in setup\_NL (because we use quarterly data for the UK and monthly data for the US).
+
+\subsection{Other files that are important to modify the code}
+\begin{enumerate}
+\item likelihood.m - computes the likelihood
+\item params\_mod.m - maps the parameter vector into the matrices used to compute the MA coefficients
+\item unwrap\_NL\_lagged2.m - computes the MA coefficients
+\item sampling\_MH.m - main file that returns the draws from the MCMC algorithm. The corresponding file for the Monte Carlo example is sampling\_MH\_MC.m. The only difference with sampling\_MH.m is that sampling\_MH\_MC.m takes into account that the intercepts and the above diagonal element in the matrix mapping from one-step forecast error to structural shocks are set to zero via a degenerate prior.
+\end{enumerate}
+
+
+\section{Priors and parameter restrictions} 
+Priors are set in the Principal file. Timing restrictions are implemented by setting tight priors on some of the elements in the contemporaneous impact matrix.
+
+Parameters are restricted in the Principal file - the MH acceptance probabilities are then adjusted to take into account that the proposal is now a random walk on a transformed parameter space. 
+
+In the setup file, the diagonal elements of $\Psi_0$ have to be restricted to be positive. These restrictions can be though of as further truncating the chosen prior distribution.
+
+\section{Order of Parameters in Parameter Vector}
+
+We now describe the ordering of the parameter vector. The parameters of the Gaussian basis functions $a$, $b$ and $c$ of each Gaussian basis function G correspond to \[
+G=ae^{-\frac{(k-b)^{2}}{c}}
+\]%
+
+Note that $c$ is not squared (unlike in the text of our FAIR papers), so that in order to interpret $c$ as the width of the Gaussian (i.e., as the ``bandwidth'' of the basis function), one first need to take its square root.
+
+\begin{enumerate}
+  \item intercepts
+  \item elements of $\Psi_0^-$ (vectorized using the standard matlab vectorization operator :, as are the elements of all arrays below))
+  \item $a^-$ (if there are multiple Gaussian basis functions, all parameters associated with first basis function are order first and so on)
+  \item $b^-$ (if there are multiple Gaussian basis functions, all parameters associated with first basis function are order first and so on)
+  \item $c^-$ (if there are multiple Gaussian basis functions, all parameters associated with first basis function are order first and so on)
+  \item free elements of $\Psi_0^+$ (i.e. the elements corresponding to the shock that is allowed to have an asymmetric response).
+  \item free elements of $a^+$ (if there are multiple Gaussian basis functions, all parameters associated with first basis function are order first and so on)
+  \item free elements of $b^+$ (if there are multiple Gaussian basis functions, all parameters associated with first basis function are order first and so on)
+  \item free elements of $c^+$ (if there are multiple Gaussian basis functions, all parameters associated with first basis function are order first and so on)
+\end{enumerate}
+
+
+For instance, for a bi-variate FAIR with 1 Gaussian basis functions and asymmetry in response to the second shock, the parameter vector $\theta $ is ordered as follows%
+\begin{equation}
+\theta =\left( \theta _{\alpha },\text{ }\theta _{\Psi _{0}^{-}},\text{ }%
+\theta _{a^{-}},\text{ }\theta _{b^{-}},\text{ }\theta _{c^{-}},\text{ }%
+\theta _{\Psi _{0}^{+}},\text{ }\theta _{a^{+}},\text{ }\theta _{b^{+}},%
+\text{ }\theta _{c^{+}}\right) ^{\prime }  \label{theta}
+\end{equation}%
+with $\theta _{\alpha }=\left( 
+\begin{array}{c}
+\alpha _{1} \\ 
+\alpha _{2}%
+\end{array}%
+\right) ^{\prime }$ the intercepts$,$ $\theta _{\Psi _{0}^{-}}=\left( 
+\begin{array}{c}
+\Psi _{0,11} \\ 
+\Psi _{0,21} \\ 
+\Psi _{0,12}^{-} \\ 
+\Psi _{0,22}^{-}%
+\end{array}%
+\right) ^{\prime },$ $\theta _{a^{-}}=\left( 
+\begin{array}{c}
+a_{11} \\ 
+a_{21} \\ 
+a_{12}^{-} \\ 
+a_{22}^{-}%
+\end{array}%
+\right) ^{\prime }$ with $a_{ij}$ the loading on the Gaussian basis function
+for the IR of variable $i$ to shock $j,$ $\theta _{b^{-}}=\left( 
+\begin{array}{c}
+b_{11} \\ 
+b_{21} \\ 
+b_{12}^{-} \\ 
+b_{22}^{-}%
+\end{array}%
+\right) ^{\prime },$ $\theta _{c^{-}}=\left( 
+\begin{array}{c}
+c_{11} \\ 
+c_{21} \\ 
+c_{12}^{-} \\ 
+c_{22}^{-}%
+\end{array}%
+\right) ^{\prime }$, $\theta _{\Psi _{0}^{+}}=\left( 
+\begin{array}{c}
+\Psi _{0,12}^{-} \\ 
+\Psi _{0,22}^{-}%
+\end{array}%
+\right) ^{\prime },$ $\theta _{a^{+}}=\left( 
+\begin{array}{c}
+a_{12}^{+} \\ 
+a_{22}^{+}%
+\end{array}%
+\right) ^{\prime },$ $\theta _{b^{+}}=\left( 
+\begin{array}{c}
+b_{12}^{+} \\ 
+b_{22}^{+}%
+\end{array}%
+\right) ^{\prime },$ $\theta _{c^{+}}=\left( 
+\begin{array}{c}
+c_{12}^{+} \\ 
+c_{22}^{+}%
+\end{array}%
+\right) ^{\prime }.$
+
+With a FAIR(2) --two Gaussian basis functions (everything else the same)--, $%
+\theta $ takes the same form as (\ref{theta}) but with $\theta
+_{a^{-}}=\left( a_{1,11},\text{ }a_{1,21},\text{ }a_{1,12}^{-},\text{ }%
+a_{1,22}^{-},\text{ }a_{2,11},\text{ }a_{2,21},\text{ }a_{2,12}^{-},\text{ }%
+a_{2,22}^{-}\right) ^{\prime }$ with $a_{1,ij}$ the loading on the first
+basis function and $a_{2,ij}$ the loading on the second basis function, and
+similarly for the other parameters of the FAIR $\theta _{b^{-}}$, $\theta
+_{c^{-}}$, etc..
+
+\bigskip \par
+
+\begin{thebibliography}{99}
+
+%\bibitem{} Barnichon R. and C. Matthes. "Functional Approximations of Impulse Responses (FAIR): Insights into the Effects of Monetary Policy," Working Paper, 2017
+
+
+\bibitem{}  Gilchrist, Simon, and Egon Zakrajsek. 2012. Credit spreads and business cycle fluctuations. \textit{American Economic Review}, 102(4): 1692-1720.
+
+\bibitem{} Romer, Christina D., and David H. Romer. 2017. New Evidence on the Aftermath of Financial Crises in Advanced Countries. \textit{American Economic Review}, 107(10): 3072-3118.
+
+\bibitem{} 
+\end{document}
